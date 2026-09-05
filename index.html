@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>金刚石晶胞互动模型</title>
-  <meta name="description" content="可旋转、可换色的金刚石晶胞互动模型，适合公众号科普和课堂演示。">
+  <title>晶胞互动模型系列</title>
+  <meta name="description" content="可旋转、可换色的晶胞互动模型系列，适合公众号科普和课堂演示。">
   <style>
     :root {
       color-scheme: light;
@@ -94,6 +94,25 @@
       background: rgba(255, 255, 255, .7);
       border: 1px solid rgba(201, 210, 214, .7);
       border-radius: 7px;
+    }
+
+    .model-tabs {
+      position: absolute;
+      left: 24px;
+      top: 122px;
+      display: flex;
+      gap: 9px;
+      flex-wrap: wrap;
+    }
+
+    .model-tabs .btn {
+      background: rgba(255, 255, 255, .78);
+    }
+
+    .model-tabs .btn[aria-pressed="true"] {
+      border-color: #176a7a;
+      background: var(--accent);
+      color: #fff;
     }
 
     aside {
@@ -306,10 +325,14 @@
 </head>
 <body>
   <main class="app">
-    <section class="stage" aria-label="金刚石晶胞三维模型">
+    <section class="stage" aria-label="晶胞三维模型">
       <div class="brand">
-        <h1>金刚石晶胞互动模型</h1>
-        <p>拖动旋转，滚轮缩放，点击任意碳原子换色。适合在公众号文章中作为“阅读原文”互动内容，引导学生停留和分享。</p>
+        <h1 id="modelTitle">晶胞互动模型系列</h1>
+        <p id="modelDescription">拖动旋转，滚轮缩放，点击任意粒子换色。</p>
+      </div>
+      <div class="model-tabs" aria-label="选择晶胞模型">
+        <button class="btn" type="button" id="modelDiamond" aria-pressed="false">金刚石</button>
+        <button class="btn" type="button" id="modelFluorite" aria-pressed="false">氟化钙</button>
       </div>
       <div id="viewer"></div>
       <div class="hint">
@@ -340,12 +363,7 @@
 
         <section class="section">
           <h2>分组演示</h2>
-          <div class="btn-grid">
-            <button class="btn" type="button" id="paintCorners">顶点原子</button>
-            <button class="btn" type="button" id="paintFaces">面心原子</button>
-            <button class="btn" type="button" id="paintInternal">内部原子</button>
-            <button class="btn primary" type="button" id="resetColors">恢复默认</button>
-          </div>
+          <div class="btn-grid" id="groupButtons"></div>
         </section>
 
         <section class="section">
@@ -366,17 +384,13 @@
           </div>
           <label class="custom-color">
             <span class="muted">棱和键颜色</span>
-            <input id="stickColor" type="color" value="#d7dee0" aria-label="棱和键颜色">
+            <input id="stickColor" type="color" value="#9aa7ad" aria-label="棱和键颜色">
           </label>
         </section>
 
         <section class="section">
           <h2>结构标识</h2>
-          <div class="legend">
-            <div class="legend-row"><span class="dot" style="background:#2f8da2"></span><span>顶点</span><span class="muted">8 个</span></div>
-            <div class="legend-row"><span class="dot" style="background:#e4a13a"></span><span>面心</span><span class="muted">6 个</span></div>
-            <div class="legend-row"><span class="dot" style="background:#6a8f3d"></span><span>内部</span><span class="muted">4 个</span></div>
-          </div>
+          <div class="legend" id="legend"></div>
         </section>
 
         <section class="section">
@@ -390,240 +404,6 @@
 
   <script src="./vendor/three/three.min.js"></script>
   <script src="./vendor/three/controls/OrbitControls-legacy.js"></script>
-  <script>
-    const viewer = document.getElementById('viewer');
-    const selectedEl = document.getElementById('selected');
-    const customColor = document.getElementById('customColor');
-    const scene = new THREE.Scene();
-    scene.background = null;
-    window.diamondUnitCellStats = { status: 'booting', atoms: 0, bonds: 0 };
-
-    const camera = new THREE.OrthographicCamera(-4, 4, 4, -4, 0.1, 100);
-    camera.position.set(8, -8, 8);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    viewer.appendChild(renderer.domElement);
-
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.07;
-    controls.minZoom = 0.72;
-    controls.maxZoom = 2.4;
-    controls.target.set(0, 0, 0);
-
-    const root = new THREE.Group();
-    scene.add(root);
-
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x9a8a74, 2.2));
-    const key = new THREE.DirectionalLight(0xffffff, 2.8);
-    key.position.set(5, -7, 8);
-    key.castShadow = true;
-    scene.add(key);
-    const fill = new THREE.DirectionalLight(0xd7f5ff, 1.4);
-    fill.position.set(-5, 4, 2);
-    scene.add(fill);
-
-    const defaultColor = '#2f8da2';
-    const groupColors = {
-      corner: '#2f8da2',
-      face: '#e4a13a',
-      internal: '#6a8f3d'
-    };
-    const atomRadius = 0.52;
-    const stickRadius = 0.14;
-    const edge = 4;
-    const center = new THREE.Vector3(0.5, 0.5, 0.5);
-    const atoms = [];
-    const atomMeshes = [];
-    let selectedAtom = null;
-
-    const cornerFracs = [];
-    [0, 1].forEach(x => [0, 1].forEach(y => [0, 1].forEach(z => cornerFracs.push([x, y, z]))));
-    const faceFracs = [
-      [0, .5, .5], [1, .5, .5], [.5, 0, .5],
-      [.5, 1, .5], [.5, .5, 0], [.5, .5, 1]
-    ];
-    const internalFracs = [
-      [.25, .25, .25], [.25, .75, .75],
-      [.75, .25, .75], [.75, .75, .25]
-    ];
-
-    function toPoint(frac) {
-      return new THREE.Vector3(
-        edge * (frac[0] - center.x),
-        edge * (frac[1] - center.y),
-        edge * (frac[2] - center.z)
-      );
-    }
-
-    function addAtom(frac, type, index) {
-      const material = new THREE.MeshStandardMaterial({
-        color: defaultColor,
-        emissive: '#000000',
-        emissiveIntensity: 0,
-        roughness: 0.38,
-        metalness: 0.06
-      });
-      const mesh = new THREE.Mesh(new THREE.SphereGeometry(atomRadius, 48, 28), material);
-      mesh.position.copy(toPoint(frac));
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      const atom = { frac, type, index, mesh, color: defaultColor };
-      mesh.userData.atom = atom;
-      atoms.push(atom);
-      atomMeshes.push(mesh);
-      root.add(mesh);
-    }
-
-    cornerFracs.forEach((frac, i) => addAtom(frac, 'corner', i + 1));
-    faceFracs.forEach((frac, i) => addAtom(frac, 'face', i + 9));
-    internalFracs.forEach((frac, i) => addAtom(frac, 'internal', i + 15));
-
-    const bondGroup = new THREE.Group();
-    root.add(bondGroup);
-    const bondMaterial = new THREE.MeshStandardMaterial({ color: '#d7dee0', roughness: 0.46, metalness: 0.02 });
-
-    function cylinderBetween(a, b, radius, material) {
-      const dir = new THREE.Vector3().subVectors(b, a);
-      const mid = new THREE.Vector3().addVectors(a, b).multiplyScalar(0.5);
-      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, dir.length(), 28), material);
-      mesh.position.copy(mid);
-      mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      return mesh;
-    }
-
-    for (let i = 0; i < atoms.length; i++) {
-      for (let j = i + 1; j < atoms.length; j++) {
-        const a = atomMeshes[i].position;
-        const b = atomMeshes[j].position;
-        if (Math.abs(a.distanceTo(b) - Math.sqrt(3)) < 0.0001) {
-          bondGroup.add(cylinderBetween(a, b, stickRadius, bondMaterial));
-        }
-      }
-    }
-    window.diamondUnitCellStats = { status: 'ready', atoms: atoms.length, bonds: bondGroup.children.length };
-
-    const frameGroup = new THREE.Group();
-    root.add(frameGroup);
-    const frameMaterial = bondMaterial;
-    const corners = cornerFracs.map(toPoint);
-    for (let i = 0; i < corners.length; i++) {
-      for (let j = i + 1; j < corners.length; j++) {
-        if (Math.abs(corners[i].distanceTo(corners[j]) - edge) < 0.0001) {
-          frameGroup.add(cylinderBetween(corners[i], corners[j], stickRadius, frameMaterial));
-        }
-      }
-    }
-
-    const raycaster = new THREE.Raycaster();
-    const pointer = new THREE.Vector2();
-    function typeName(type) {
-      return { corner: '顶点原子', face: '面心原子', internal: '内部原子' }[type];
-    }
-
-    function clearHighlight() {
-      if (!selectedAtom) return;
-      selectedAtom.mesh.scale.setScalar(1);
-      selectedAtom.mesh.material.emissive.set('#000000');
-      selectedAtom.mesh.material.emissiveIntensity = 0;
-    }
-
-    function updateSelected(atom) {
-      clearHighlight();
-      selectedAtom = atom;
-      if (!atom) {
-        selectedEl.innerHTML = '<strong>未选中原子</strong><br><span class="muted">点击任意球体后可单独换色。</span>';
-        return;
-      }
-      atom.mesh.scale.setScalar(1.14);
-      atom.mesh.material.emissive.copy(atom.mesh.material.color);
-      atom.mesh.material.emissiveIntensity = 0.38;
-      customColor.value = atom.color;
-      selectedEl.innerHTML = `<strong>C ${String(atom.index).padStart(2, '0')} · ${typeName(atom.type)}</strong><br><span class="muted">分数坐标 (${atom.frac.map(v => v.toFixed(2)).join(', ')})</span>`;
-    }
-
-    function setAtomColor(atom, color) {
-      atom.color = color;
-      atom.mesh.material.color.set(color);
-      if (selectedAtom === atom) customColor.value = color;
-    }
-
-    function paintGroup(type, color) {
-      atoms.filter(atom => atom.type === type).forEach(atom => setAtomColor(atom, color));
-    }
-
-    function handlePick(event) {
-      const rect = renderer.domElement.getBoundingClientRect();
-      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-      raycaster.setFromCamera(pointer, camera);
-      const hit = raycaster.intersectObjects(atomMeshes, false)[0];
-      updateSelected(hit ? hit.object.userData.atom : null);
-    }
-
-    renderer.domElement.addEventListener('pointerdown', event => {
-      renderer.domElement.dataset.downX = event.clientX;
-      renderer.domElement.dataset.downY = event.clientY;
-    });
-    renderer.domElement.addEventListener('pointerup', event => {
-      const dx = Math.abs(event.clientX - Number(renderer.domElement.dataset.downX || 0));
-      const dy = Math.abs(event.clientY - Number(renderer.domElement.dataset.downY || 0));
-      if (dx < 5 && dy < 5) handlePick(event);
-    });
-
-    const colors = ['#2f8da2', '#e4a13a', '#6a8f3d', '#c8553d', '#7b5bb7', '#2d3337', '#ffffff', '#f2cf63', '#78b7c5', '#f08a5d'];
-    const swatches = document.getElementById('swatches');
-    colors.forEach(color => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'swatch';
-      button.style.background = color;
-      button.setAttribute('aria-label', `使用颜色 ${color}`);
-      button.addEventListener('click', () => selectedAtom && setAtomColor(selectedAtom, color));
-      swatches.appendChild(button);
-    });
-
-    customColor.addEventListener('input', () => selectedAtom && setAtomColor(selectedAtom, customColor.value));
-    document.getElementById('paintCorners').addEventListener('click', () => paintGroup('corner', groupColors.corner));
-    document.getElementById('paintFaces').addEventListener('click', () => paintGroup('face', groupColors.face));
-    document.getElementById('paintInternal').addEventListener('click', () => paintGroup('internal', groupColors.internal));
-    document.getElementById('resetColors').addEventListener('click', () => atoms.forEach(atom => setAtomColor(atom, defaultColor)));
-    document.getElementById('showFrame').addEventListener('change', event => frameGroup.visible = event.target.checked);
-    document.getElementById('showBonds').addEventListener('change', event => bondGroup.visible = event.target.checked);
-    document.getElementById('stickColor').addEventListener('input', event => {
-      bondMaterial.color.set(event.target.value);
-    });
-
-    function resize() {
-      const rect = document.querySelector('.stage').getBoundingClientRect();
-      renderer.setSize(rect.width, rect.height, false);
-      const aspect = rect.width / rect.height;
-      const viewSize = 8.9;
-      camera.left = -viewSize * aspect / 2;
-      camera.right = viewSize * aspect / 2;
-      camera.top = viewSize / 2;
-      camera.bottom = -viewSize / 2;
-      camera.updateProjectionMatrix();
-    }
-
-    window.addEventListener('resize', resize);
-    resize();
-
-    function animate() {
-      requestAnimationFrame(animate);
-      if (document.getElementById('autoRotate').checked) root.rotation.z += 0.006;
-      controls.update();
-      renderer.render(scene, camera);
-    }
-
-    updateSelected(null);
-    animate();
-  </script>
+  <script src="./app.js"></script>
 </body>
 </html>

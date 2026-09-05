@@ -4,8 +4,7 @@
 
 ## 页面
 
-- `index.html`：金刚石晶胞互动模型
-- `calcium-fluoride.html`：氟化钙晶胞互动模型
+- `index.html`：统一入口，可在金刚石晶胞和氟化钙晶胞之间切换
 
 ## 功能
 
