@@ -365,7 +365,7 @@
           </div>
           <label class="custom-color">
             <span class="muted">棱和键颜色</span>
-            <input id="stickColor" type="color" value="#d7dee0" aria-label="棱和键颜色">
+            <input id="stickColor" type="color" value="#9aa7ad" aria-label="棱和键颜色">
           </label>
         </section>
 
@@ -417,22 +417,22 @@
     const root = new THREE.Group();
     scene.add(root);
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x9a8a74, 1.1));
-    const key = new THREE.DirectionalLight(0xffffff, 1.55);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x9a8a74, 0.62));
+    const key = new THREE.DirectionalLight(0xffffff, 0.9);
     key.position.set(5, -7, 8);
     key.castShadow = true;
     scene.add(key);
-    const fill = new THREE.DirectionalLight(0xd7f5ff, 0.72);
+    const fill = new THREE.DirectionalLight(0xd7f5ff, 0.28);
     fill.position.set(-5, 4, 2);
     scene.add(fill);
 
     const defaultColors = {
       calcium: '#2b6fa8',
-      fluorine: '#72b543'
+      fluorine: '#5f9f3a'
     };
     const groupColors = {
       calcium: '#2b6fa8',
-      fluorine: '#72b543'
+      fluorine: '#5f9f3a'
     };
     const ionRadii = {
       calcium: 0.46,
@@ -472,8 +472,8 @@
         color,
         emissive: '#000000',
         emissiveIntensity: 0,
-        roughness: 0.38,
-        metalness: 0.06
+        roughness: 0.62,
+        metalness: 0.02
       });
       const mesh = new THREE.Mesh(new THREE.SphereGeometry(ionRadii[type], 48, 28), material);
       mesh.position.copy(toPoint(frac));
@@ -492,7 +492,7 @@
 
     const bondGroup = new THREE.Group();
     root.add(bondGroup);
-    const bondMaterial = new THREE.MeshStandardMaterial({ color: '#d7dee0', roughness: 0.46, metalness: 0.02 });
+    const bondMaterial = new THREE.MeshStandardMaterial({ color: '#9aa7ad', roughness: 0.68, metalness: 0.01 });
 
     function cylinderBetween(a, b, radius, material) {
       const dir = new THREE.Vector3().subVectors(b, a);
@@ -552,7 +552,7 @@
       }
       atom.mesh.scale.setScalar(1.14);
       atom.mesh.material.emissive.copy(atom.mesh.material.color);
-      atom.mesh.material.emissiveIntensity = 0.38;
+      atom.mesh.material.emissiveIntensity = 0.18;
       customColor.value = atom.color;
       const symbol = atom.type === 'calcium' ? 'Ca' : 'F';
       selectedEl.innerHTML = `<strong>${symbol} ${String(atom.index).padStart(2, '0')} · ${typeName(atom.type)}</strong><br><span class="muted">分数坐标 (${atom.frac.map(v => v.toFixed(2)).join(', ')})</span>`;
