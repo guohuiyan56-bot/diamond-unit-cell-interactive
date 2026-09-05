@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>金刚石晶胞互动模型</title>
-  <meta name="description" content="可旋转、可换色的金刚石晶胞互动模型，适合公众号科普和课堂演示。">
+  <title>氟化钙晶胞互动模型</title>
+  <meta name="description" content="可旋转、可换色的氟化钙萤石结构互动模型，适合公众号科普和课堂演示。">
   <style>
     :root {
       color-scheme: light;
@@ -306,10 +306,10 @@
 </head>
 <body>
   <main class="app">
-    <section class="stage" aria-label="金刚石晶胞三维模型">
+    <section class="stage" aria-label="氟化钙晶胞三维模型">
       <div class="brand">
-        <h1>金刚石晶胞互动模型</h1>
-        <p>拖动旋转，滚轮缩放，点击任意碳原子换色。适合在公众号文章中作为“阅读原文”互动内容，引导学生停留和分享。</p>
+        <h1>氟化钙晶胞互动模型</h1>
+        <p>拖动旋转，滚轮缩放，点击任意离子换色。Ca2+ 构成面心立方点阵，F- 位于 8 个四面体空隙。</p>
       </div>
       <div id="viewer"></div>
       <div class="hint">
@@ -341,9 +341,8 @@
         <section class="section">
           <h2>分组演示</h2>
           <div class="btn-grid">
-            <button class="btn" type="button" id="paintCorners">顶点原子</button>
-            <button class="btn" type="button" id="paintFaces">面心原子</button>
-            <button class="btn" type="button" id="paintInternal">内部原子</button>
+            <button class="btn" type="button" id="paintCalcium">钙离子</button>
+            <button class="btn" type="button" id="paintFluorine">氟离子</button>
             <button class="btn primary" type="button" id="resetColors">恢复默认</button>
           </div>
         </section>
@@ -373,9 +372,9 @@
         <section class="section">
           <h2>结构标识</h2>
           <div class="legend">
-            <div class="legend-row"><span class="dot" style="background:#2f8da2"></span><span>顶点</span><span class="muted">8 个</span></div>
-            <div class="legend-row"><span class="dot" style="background:#e4a13a"></span><span>面心</span><span class="muted">6 个</span></div>
-            <div class="legend-row"><span class="dot" style="background:#6a8f3d"></span><span>内部</span><span class="muted">4 个</span></div>
+            <div class="legend-row"><span class="dot" style="background:#2f79b7"></span><span>Ca2+：面心立方点阵</span><span class="muted">14 个可见</span></div>
+            <div class="legend-row"><span class="dot" style="background:#65a844"></span><span>F-：四面体空隙</span><span class="muted">8 个</span></div>
+            <div class="legend-row"><span class="dot" style="background:#d7dee0"></span><span>Ca-F 键和晶胞棱</span><span class="muted">同色同粗</span></div>
           </div>
         </section>
 
@@ -418,22 +417,27 @@
     const root = new THREE.Group();
     scene.add(root);
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x9a8a74, 2.2));
-    const key = new THREE.DirectionalLight(0xffffff, 2.8);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x9a8a74, 1.1));
+    const key = new THREE.DirectionalLight(0xffffff, 1.55);
     key.position.set(5, -7, 8);
     key.castShadow = true;
     scene.add(key);
-    const fill = new THREE.DirectionalLight(0xd7f5ff, 1.4);
+    const fill = new THREE.DirectionalLight(0xd7f5ff, 0.72);
     fill.position.set(-5, 4, 2);
     scene.add(fill);
 
-    const defaultColor = '#2f8da2';
-    const groupColors = {
-      corner: '#2f8da2',
-      face: '#e4a13a',
-      internal: '#6a8f3d'
+    const defaultColors = {
+      calcium: '#2b6fa8',
+      fluorine: '#72b543'
     };
-    const atomRadius = 0.52;
+    const groupColors = {
+      calcium: '#2b6fa8',
+      fluorine: '#72b543'
+    };
+    const ionRadii = {
+      calcium: 0.46,
+      fluorine: 0.32
+    };
     const stickRadius = 0.14;
     const edge = 4;
     const center = new THREE.Vector3(0.5, 0.5, 0.5);
@@ -447,9 +451,11 @@
       [0, .5, .5], [1, .5, .5], [.5, 0, .5],
       [.5, 1, .5], [.5, .5, 0], [.5, .5, 1]
     ];
-    const internalFracs = [
-      [.25, .25, .25], [.25, .75, .75],
-      [.75, .25, .75], [.75, .75, .25]
+    const fluorineFracs = [
+      [.25, .25, .25], [.25, .25, .75],
+      [.25, .75, .25], [.25, .75, .75],
+      [.75, .25, .25], [.75, .25, .75],
+      [.75, .75, .25], [.75, .75, .75]
     ];
 
     function toPoint(frac) {
@@ -461,27 +467,28 @@
     }
 
     function addAtom(frac, type, index) {
+      const color = defaultColors[type];
       const material = new THREE.MeshStandardMaterial({
-        color: defaultColor,
+        color,
         emissive: '#000000',
         emissiveIntensity: 0,
         roughness: 0.38,
         metalness: 0.06
       });
-      const mesh = new THREE.Mesh(new THREE.SphereGeometry(atomRadius, 48, 28), material);
+      const mesh = new THREE.Mesh(new THREE.SphereGeometry(ionRadii[type], 48, 28), material);
       mesh.position.copy(toPoint(frac));
       mesh.castShadow = true;
       mesh.receiveShadow = true;
-      const atom = { frac, type, index, mesh, color: defaultColor };
+      const atom = { frac, type, index, mesh, color };
       mesh.userData.atom = atom;
       atoms.push(atom);
       atomMeshes.push(mesh);
       root.add(mesh);
     }
 
-    cornerFracs.forEach((frac, i) => addAtom(frac, 'corner', i + 1));
-    faceFracs.forEach((frac, i) => addAtom(frac, 'face', i + 9));
-    internalFracs.forEach((frac, i) => addAtom(frac, 'internal', i + 15));
+    cornerFracs.forEach((frac, i) => addAtom(frac, 'calcium', i + 1));
+    faceFracs.forEach((frac, i) => addAtom(frac, 'calcium', i + 9));
+    fluorineFracs.forEach((frac, i) => addAtom(frac, 'fluorine', i + 1));
 
     const bondGroup = new THREE.Group();
     root.add(bondGroup);
@@ -498,16 +505,18 @@
       return mesh;
     }
 
-    for (let i = 0; i < atoms.length; i++) {
-      for (let j = i + 1; j < atoms.length; j++) {
-        const a = atomMeshes[i].position;
-        const b = atomMeshes[j].position;
+    const calciumAtoms = atoms.filter(atom => atom.type === 'calcium');
+    const fluorineAtoms = atoms.filter(atom => atom.type === 'fluorine');
+    for (const calcium of calciumAtoms) {
+      for (const fluorine of fluorineAtoms) {
+        const a = calcium.mesh.position;
+        const b = fluorine.mesh.position;
         if (Math.abs(a.distanceTo(b) - Math.sqrt(3)) < 0.0001) {
           bondGroup.add(cylinderBetween(a, b, stickRadius, bondMaterial));
         }
       }
     }
-    window.diamondUnitCellStats = { status: 'ready', atoms: atoms.length, bonds: bondGroup.children.length };
+    window.fluoriteUnitCellStats = { status: 'ready', calcium: calciumAtoms.length, fluorine: fluorineAtoms.length, bonds: bondGroup.children.length };
 
     const frameGroup = new THREE.Group();
     root.add(frameGroup);
@@ -524,7 +533,7 @@
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
     function typeName(type) {
-      return { corner: '顶点原子', face: '面心原子', internal: '内部原子' }[type];
+      return { calcium: 'Ca2+ 钙离子', fluorine: 'F- 氟离子' }[type];
     }
 
     function clearHighlight() {
@@ -545,7 +554,8 @@
       atom.mesh.material.emissive.copy(atom.mesh.material.color);
       atom.mesh.material.emissiveIntensity = 0.38;
       customColor.value = atom.color;
-      selectedEl.innerHTML = `<strong>C ${String(atom.index).padStart(2, '0')} · ${typeName(atom.type)}</strong><br><span class="muted">分数坐标 (${atom.frac.map(v => v.toFixed(2)).join(', ')})</span>`;
+      const symbol = atom.type === 'calcium' ? 'Ca' : 'F';
+      selectedEl.innerHTML = `<strong>${symbol} ${String(atom.index).padStart(2, '0')} · ${typeName(atom.type)}</strong><br><span class="muted">分数坐标 (${atom.frac.map(v => v.toFixed(2)).join(', ')})</span>`;
     }
 
     function setAtomColor(atom, color) {
@@ -590,10 +600,9 @@
     });
 
     customColor.addEventListener('input', () => selectedAtom && setAtomColor(selectedAtom, customColor.value));
-    document.getElementById('paintCorners').addEventListener('click', () => paintGroup('corner', groupColors.corner));
-    document.getElementById('paintFaces').addEventListener('click', () => paintGroup('face', groupColors.face));
-    document.getElementById('paintInternal').addEventListener('click', () => paintGroup('internal', groupColors.internal));
-    document.getElementById('resetColors').addEventListener('click', () => atoms.forEach(atom => setAtomColor(atom, defaultColor)));
+    document.getElementById('paintCalcium').addEventListener('click', () => paintGroup('calcium', groupColors.calcium));
+    document.getElementById('paintFluorine').addEventListener('click', () => paintGroup('fluorine', groupColors.fluorine));
+    document.getElementById('resetColors').addEventListener('click', () => atoms.forEach(atom => setAtomColor(atom, defaultColors[atom.type])));
     document.getElementById('showFrame').addEventListener('change', event => frameGroup.visible = event.target.checked);
     document.getElementById('showBonds').addEventListener('change', event => bondGroup.visible = event.target.checked);
     document.getElementById('stickColor').addEventListener('input', event => {
